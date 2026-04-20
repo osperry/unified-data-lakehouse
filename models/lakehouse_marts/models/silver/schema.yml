@@ -1,0 +1,98 @@
+version: 2
+
+models:
+  - name: stg_complaints
+    description: "Cleaned and deduplicated NYC 311 complaints from bronze JSON"
+    columns:
+      - name: complaint_id
+        description: "Unique complaint identifier"
+        tests:
+          - unique
+          - not_null
+      - name: created_date
+        description: "When the complaint was filed"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: "'2020-01-01'"
+              max_value: "current_date + interval '1 day'"
+      - name: complaint_type
+        tests:
+          - not_null
+          - dbt_utils.not_constant
+      - name: borough
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MANHATTAN','BROOKLYN','QUEENS','BRONX','STATEN ISLAND','UNSPECIFIED']
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CLOSED','OPEN','IN PROGRESS','PENDING','ASSIGNED','STARTED','UNSPECIFIED']
+      - name: agency
+        tests:
+          - not_null
+          - dbt_utils.not_constant
+      - name: police_precinct
+        tests:
+          - not_null
+      - name: channel_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ONLINE','PHONE','MOBILE','UNKNOWN','OTHER']
+      - name: resolution_days
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -1000
+              max_value: 5000
+              config:
+                severity: warn
+      - name: latitude
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 40.4
+              max_value: 40.95
+              config:
+                where: "latitude is not null"
+      - name: longitude
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -74.3
+              max_value: -73.7
+              config:
+                where: "longitude is not null"
+    tests:
+      - dbt_utils.recency:
+          datepart: day
+          field: created_date
+          interval: 30
+          config:
+            severity: warn
+
+  - name: stg_fred_observations
+    description: "FRED macroeconomic time series observations"
+    columns:
+      - name: series_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['UNRATE','CPIAUCSL','FEDFUNDS','GDP']
+      - name: observation_date
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: "'1940-01-01'"
+              max_value: "current_date + interval '1 day'"
+      - name: value
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: -50
+              max_value: 100000
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - series_id
+            - observation_date

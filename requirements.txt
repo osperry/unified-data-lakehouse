@@ -1,0 +1,11 @@
+requests
+python-dotenv
+duckdb
+dbt-core
+dbt-duckdb
+dagster
+dagster-webserver
+streamlit
+pandas
+fastapi
+uvicorn

@@ -1,0 +1,7 @@
+lakehouse_marts:
+  outputs:
+    dev:
+      type: duckdb
+      path: /app/data/lakehouse.duckdb
+      threads: 4
+  target: dev

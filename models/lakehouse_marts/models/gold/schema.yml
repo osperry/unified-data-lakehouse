@@ -1,0 +1,115 @@
+version: 2
+
+models:
+  - name: fct_daily_complaints
+    description: "Daily complaint volume by borough"
+    columns:
+      - name: complaint_date
+        tests: [not_null]
+      - name: borough
+        tests: [not_null]
+      - name: total_complaints
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 50000
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - complaint_date
+            - borough
+      - dbt_utils.expression_is_true:
+          expression: "total_complaints >= closed_complaints + open_complaints"
+          config:
+            severity: warn
+
+  - name: fct_borough_summary
+    description: "Precinct priority rankings with anomaly rates"
+    columns:
+      - name: police_precinct
+        tests: [not_null]
+      - name: total_complaints
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: open_rate_pct
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: anomaly_rate_pct
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: priority_rank
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - police_precinct
+            - borough
+
+  - name: fct_resolution_anomalies
+    description: "Individual complaints closed before created (investigation table)"
+    columns:
+      - name: complaint_id
+        tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('stg_complaints')
+              field: complaint_id
+      - name: resolution_days
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= 0"
+
+  - name: fct_anomaly_summary
+    description: "Aggregated anomaly patterns by agency/precinct/year"
+    columns:
+      - name: anomaly_count
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: agency
+        tests: [not_null]
+      - name: complaint_type
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - agency
+            - complaint_type
+            - borough
+            - police_precinct
+            - complaint_year
+
+  - name: fct_macro_daily
+    description: "FRED macro indicators pivoted by date"
+    columns:
+      - name: observation_date
+        tests: [unique, not_null]
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "unemployment_rate is not null or cpi is not null or fed_funds_rate is not null or gdp is not null"
+
+  - name: fct_economic_service_correlation
+    description: "Monthly macro indicators joined with complaint volume"
+    columns:
+      - name: month_date
+        tests: [unique, not_null]
+      - name: total_complaints
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+    tests:
+      - dbt_utils.at_least_one:
+          column_name: unemployment_rate
+      - dbt_utils.expression_is_true:
+          expression: "month_date >= '2020-07-01'"

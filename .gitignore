@@ -1,0 +1,11 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+data/bronze/
+data/*.duckdb
+.tmp_dagster_home*/
+target/
+dbt_packages/
+logs/
+.DS_Store
