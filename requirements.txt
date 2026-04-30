@@ -3,8 +3,8 @@ python-dotenv
 duckdb
 dbt-core
 dbt-duckdb
-dagster
-dagster-webserver
+dagster>=1.10.16,<2.0
+dagster-webserver>=1.10.16,<2.0
 streamlit
 pandas
 fastapi
