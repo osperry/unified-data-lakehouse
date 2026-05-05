@@ -1,16 +1,16 @@
 #!/bin/bash
-# Auto-restart Dagster if it crashes
-# Run this instead of dagster dev directly
+# Unified Data Lakehouse startup script
 
-LOGFILE="/app/orchestrate/dagster.log"
-CMD="dagster dev -f /app/orchestrate/pipeline.py --host 0.0.0.0 --port 3000"
+echo "[$(date)] Starting Unified Data Lakehouse..."
 
-echo "Starting Dagster auto-restart wrapper..."
+# Start FastAPI in background
+echo "[$(date)] Starting FastAPI..."
+uvicorn api.main:app --host 0.0.0.0 --port 8000 &
 
-while true; do
-    echo "[$(date)] Starting Dagster..." | tee -a "$LOGFILE"
-    $CMD >> "$LOGFILE" 2>&1
-    EXIT_CODE=$?
-    echo "[$(date)] Dagster exited with code $EXIT_CODE. Restarting in 10 seconds..." | tee -a "$LOGFILE"
-    sleep 10
-done
+# Start Streamlit in background
+echo "[$(date)] Starting Streamlit..."
+streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0 &
+
+# Start Dagster with existing auto-restart wrapper in foreground
+echo "[$(date)] Starting Dagster via start_dagster.sh..."
+bash /app/orchestrate/start_dagster.sh

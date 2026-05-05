@@ -9,6 +9,5 @@ services:
       - "3001:3000"
       - "8502:8501"
       - "8001:8000"
-    stdin_open: true
-    tty: true
-    command: bash
+    restart: always
+    command: bash /app/start.sh
