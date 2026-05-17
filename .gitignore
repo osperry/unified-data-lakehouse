@@ -1,0 +1,61 @@
+# Data — never commit raw data or warehouses
+pipelines/*/data/
+
+# Secrets
+.env
+pipelines/*/.env
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# dbt artifacts
+**/target/
+**/dbt_packages/
+**/logs/
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
+# Parquet exports
+*.parquet
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Dagster
+.tmp_dagster_home*/
+
+# Local environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Secrets / env
+.env
+*.env
+.env.*
+
+# Local data / generated artifacts
+data/
+logs/
+*.duckdb
+*.duckdb.wal
+*.parquet
+pipelines/*/data/
+ml_validation_layer/outputs/
+ml_validation_layer/metadata/validation_reports/
+
+# Secrets
+.env
+*.env
+.env.*
+pipelines/*/.env
+pipelines/*/*.env

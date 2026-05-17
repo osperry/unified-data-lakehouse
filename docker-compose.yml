@@ -1,0 +1,26 @@
+services:
+
+  nyc311:
+    build: pipelines/nyc311/
+    volumes:
+      - ./pipelines/nyc311:/app
+      - ./pipelines/nyc311/data:/app/data
+      - ./pipelines/fred/data/bronze:/app/data/fred_bronze:ro   # FRED bronze for fct_property_incidents LOCF join
+    env_file: pipelines/nyc311/.env
+    ports:
+      - "3000:3000"   # Dagster UI
+      - "8501:8501"   # Streamlit (future)
+    stdin_open: true
+    tty: true
+
+  fred:
+    build: pipelines/fred/
+    volumes:
+      - ./pipelines/fred:/app
+      - ./pipelines/fred/data:/app/data
+    env_file: pipelines/fred/.env
+    ports:
+      - "3002:3000"   # Dagster UI (3002 to avoid collision with nyc311)
+      - "8504:8501"   # Streamlit (future)
+    stdin_open: true
+    tty: true

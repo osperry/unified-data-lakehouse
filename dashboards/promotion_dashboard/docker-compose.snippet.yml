@@ -1,0 +1,19 @@
+# Add this service to your existing docker-compose.yml.
+# It mounts your warehouse read-only and exposes the dashboard on localhost:8505.
+#
+# Full snippet to paste under the `services:` block:
+
+services:
+  promotion_dashboard:
+    build:
+      context: ./dashboards/promotion_dashboard
+      dockerfile: Dockerfile
+    container_name: osp_promotion_dashboard
+    ports:
+      - "8505:8505"
+    volumes:
+      - ./data:/data:ro
+    environment:
+      OSP_WAREHOUSE_PATH: /data/warehouse.duckdb
+      OSP_CI_CD_LOG_TABLE: ci_cd_log
+    restart: unless-stopped

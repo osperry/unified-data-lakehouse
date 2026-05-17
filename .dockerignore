@@ -1,0 +1,11 @@
+data/
+.env
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.git/
+.venv/
+*.duckdb
+*.parquet
