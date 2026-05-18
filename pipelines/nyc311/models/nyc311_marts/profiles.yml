@@ -1,0 +1,7 @@
+nyc311_marts:
+  outputs:
+    dev:
+      type: duckdb
+      path: /app/data/nyc311.duckdb
+      threads: 4
+  target: dev

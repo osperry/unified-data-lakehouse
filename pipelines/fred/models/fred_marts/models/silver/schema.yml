@@ -1,0 +1,10 @@
+version: 2
+models:
+  - name: stg_fred_observations
+    columns:
+      - name: series_id
+        tests: [not_null]
+      - name: observation_date
+        tests: [not_null]
+      - name: value
+        tests: [not_null]

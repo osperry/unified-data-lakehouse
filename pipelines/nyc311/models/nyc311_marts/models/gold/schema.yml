@@ -1,0 +1,160 @@
+version: 2
+
+models:
+
+  # ── EXISTING ────────────────────────────────────────────────────────────────
+
+  - name: fct_daily_complaints
+    description: >
+      Daily complaint counts aggregated by borough. Tier 1 — Minimal.
+      Entry-level product. No FRED join.
+    columns:
+      - name: complaint_date
+        description: "Date of complaint (from created_date)"
+        tests: [not_null]
+      - name: borough
+        description: "NYC borough (MANHATTAN, BROOKLYN, QUEENS, BRONX, STATEN ISLAND, UNSPECIFIED)"
+        tests: [not_null]
+
+  - name: fct_borough_summary
+    description: >
+      Precinct-level complaint stats with priority ranking.
+      Tier 2 — Medium. No FRED join.
+
+  - name: fct_anomaly_summary
+    description: >
+      Anomaly counts grouped by agency, borough, complaint type, and year.
+      Anomaly = closed_date < created_date (data quality / process error signal).
+      Tier 2 — Medium.
+
+  - name: fct_resolution_anomalies
+    description: >
+      Row-level detail of all anomalous complaints.
+      Tier 2 — Medium.
+
+  # ── NEW — PREMIUM TIER ──────────────────────────────────────────────────────
+
+  - name: fct_property_incidents
+    description: >
+      PREMIUM TIER 4. Row-level complaint history per property address,
+      joined to FRED macro indicators via LOCF (Last Observation Carried Forward).
+      One row per complaint. Primary join key for customers:
+        full_address (string) or latitude + longitude (geo).
+      FRED series joined: UNRATE (monthly), CPIAUCSL (monthly),
+        FEDFUNDS (monthly), GDP (quarterly).
+      Address cleaning applied: abbreviation normalization, full_address concat,
+        neighborhood_quality_flag (CLEAN / GENERIC / MISSING / CROSS_BOROUGH).
+      Rows with null/blank incident_address are excluded.
+    columns:
+      - name: complaint_id
+        description: "Unique complaint identifier"
+        tests: [not_null, unique]
+      - name: incident_address
+        description: "Cleaned, normalized street address (abbreviations expanded)"
+        tests: [not_null]
+      - name: full_address
+        description: >
+          Single-field property join key:
+          '{incident_address}, {neighborhood}, {borough}, NY {zip_code}'.
+          Use for matching to MLS listings, tax records, or claims systems.
+      - name: neighborhood
+        description: >
+          Sub-borough neighborhood from city field. Highest resolution in Queens
+          (40+ values). Generic in Manhattan/Brooklyn. See neighborhood_quality_flag.
+      - name: neighborhood_quality_flag
+        description: >
+          CLEAN = real sub-borough neighborhood name
+          GENERIC = city is just the borough name (no sub-area)
+          MISSING = city field is null
+          CROSS_BOROUGH = city value doesn't match expected borough
+      - name: zip_code
+        description: "5-digit ZIP code (validated in silver)"
+      - name: borough
+        description: "NYC borough"
+      - name: latitude
+        description: "WGS84 latitude. Null where not reported."
+      - name: longitude
+        description: "WGS84 longitude. Null where not reported."
+      - name: complaint_date
+        description: "Date of complaint (DATE type)"
+        tests: [not_null]
+      - name: complaint_type
+        description: "Standardized complaint type (UPPER)"
+      - name: status
+        description: "Current complaint status"
+      - name: resolution_days
+        description: "Days from created to closed. Null if still open."
+      - name: is_resolution_anomaly
+        description: "TRUE if closed_date < created_date (data/process error)"
+      - name: fred_reference_date
+        description: >
+          The FRED observation date used for macro values (first day of month).
+          Null if no FRED data available for that period.
+      - name: unemployment_rate
+        description: "UNRATE — US national unemployment rate (%) at time of complaint (LOCF)"
+      - name: cpi
+        description: "CPIAUCSL — Consumer Price Index at time of complaint (LOCF)"
+      - name: fed_funds_rate
+        description: "FEDFUNDS — Federal Funds Rate (%) at time of complaint (LOCF)"
+      - name: gdp_billions
+        description: "GDP — US nominal GDP in billions USD at time of complaint (LOCF, quarterly)"
+
+  - name: fct_address_risk_score
+    description: >
+      PREMIUM TIER 4. Aggregated complaint intelligence per property address.
+      One row per unique cleaned address + ZIP. Includes Property Risk Score (0–100).
+      Risk score v1 formula:
+        (total_complaints×2) + (open_complaints×5) + (avg_resolution_days×0.5)
+        + (anomaly_count×10) + (high_risk_complaints×3)  — capped at 100.
+      Risk tiers: HIGH ≥70 / MEDIUM 40–69 / LOW <40.
+      Calibrate weights with actuary or underwriter before production pricing use.
+    columns:
+      - name: incident_address
+        description: "Cleaned, normalized street address"
+        tests: [not_null]
+      - name: zip_code
+        description: "5-digit ZIP code"
+      - name: full_address
+        description: "Single-field property join key for external system matching"
+      - name: property_risk_score
+        description: >
+          0–100 composite risk score (v1 — illustrative weights).
+          Higher = more complaints, more unresolved, more anomalies, more
+          structural/habitability complaint types.
+        tests: [not_null]
+      - name: risk_tier
+        description: "HIGH / MEDIUM / LOW based on property_risk_score thresholds"
+        tests:
+          - accepted_values:
+              values: ['HIGH', 'MEDIUM', 'LOW']
+      - name: highest_complaint_risk_class
+        description: >
+          Highest risk classification ever seen at this address.
+          HIGH = structural/habitability type present (heat, plumbing, mold, etc.)
+          MEDIUM = nuisance type present (noise, illegal parking, etc.)
+          LOW = only environmental/transient types
+      - name: top_complaint_type
+        description: "Most frequent complaint type at this address"
+      - name: total_complaints
+        description: "Total complaint count at this address across all history"
+        tests: [not_null]
+      - name: open_complaints
+        description: "Count of complaints where status != CLOSED"
+      - name: open_rate_pct
+        description: "Percentage of complaints still open (0.0–100.0)"
+      - name: avg_resolution_days
+        description: "Average days to resolution for closed complaints"
+      - name: anomaly_count
+        description: "Count of complaints where closed_date < created_date"
+      - name: anomaly_rate_pct
+        description: "Anomaly count as percentage of total complaints"
+      - name: high_risk_complaints
+        description: "Count of structural/habitability complaint types at this address"
+      - name: first_complaint_date
+        description: "Earliest complaint date on record for this address"
+      - name: last_complaint_date
+        description: "Most recent complaint date for this address"
+      - name: complaint_history_days
+        description: "Days between first and last complaint — property complaint history span"
+      - name: scored_at
+        description: "Timestamp when this risk score was computed"

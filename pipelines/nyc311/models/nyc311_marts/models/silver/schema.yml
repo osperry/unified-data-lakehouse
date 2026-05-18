@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: stg_complaints
+    description: "Cleaned and deduplicated NYC 311 complaints from bronze JSON files"
+    columns:
+      - name: complaint_id
+        description: "Unique complaint identifier (unique_key from source)"
+        tests:
+          - unique
+          - not_null
+      - name: created_date
+        description: "Timestamp when the complaint was created"
+        tests:
+          - not_null
+      - name: complaint_type
+        description: "Type of complaint (e.g. Noise, Illegal Parking)"
+        tests:
+          - not_null
+      - name: borough
+        description: "NYC borough or UNSPECIFIED"
+        tests:
+          - accepted_values:
+              values: ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND', 'UNSPECIFIED']
+      - name: status
+        description: "Current complaint status"
+        tests:
+          - not_null
